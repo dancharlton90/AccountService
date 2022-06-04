@@ -1,48 +1,44 @@
 package account.payment;
 
 import account.user.User;
-import account.user.UserService;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.validation.annotation.Validated;
 
 import javax.persistence.*;
 import javax.validation.constraints.Min;
-import javax.validation.constraints.NotNull;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
+import javax.validation.constraints.NotEmpty;
+import java.time.YearMonth;
 import java.util.Objects;
 
+@Validated
 @Entity
-@Table(name = "payment")
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"period", "employee"}))
 public class Payment {
 
-    @Transient
-    @Autowired
-    UserService userService;
-
     @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id", nullable = false)
     private Long id;
 
-    @NotNull
+    @NotEmpty
     private String employee;
 
-    @NotNull
-    private LocalDate period;
+    private YearMonth period;
 
-    @NotNull
-    @Min(0)
+    @Min(value = 0, message = "salary must not be negative!")
     private Long salary;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
+    @ManyToOne(targetEntity = User.class, fetch = FetchType.EAGER)
+    @JoinColumn
     private User user;
 
-    public User getUser() {
-        return user;
+    public Payment() {
     }
 
-    public void setUser(User user) {
-        this.user = userService.getUserByEmail(employee).get();
+    public Payment(String employee, YearMonth period, Long salary, User user) {
+        this.employee = employee;
+        this.period = period;
+        this.salary = salary;
+        this.user = user;
     }
 
     public Long getId() {
@@ -61,12 +57,12 @@ public class Payment {
         this.employee = employee;
     }
 
-    public LocalDate getPeriod() {
+    public YearMonth getPeriod() {
         return period;
     }
 
-    public void setPeriod(String monthYear) {
-        this.period = LocalDate.parse(monthYear, DateTimeFormatter.ofPattern("mm-YYYY"));
+    public void setPeriod(YearMonth period) {
+        this.period = period;
     }
 
     public Long getSalary() {
@@ -77,16 +73,24 @@ public class Payment {
         this.salary = salary;
     }
 
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Payment payment = (Payment) o;
-        return period.equals(payment.period);
+        return employee.equals(payment.employee) && period.equals(payment.period);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(period);
+        return Objects.hash(employee, period);
     }
 }

@@ -3,7 +3,6 @@ package account.security;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -24,6 +23,12 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
     @Autowired
     private RestAuthenticationEntryPoint restAuthenticationEntryPoint;
 
+    @Autowired
+    private CustomAccessDeniedHandler customAccessDeniedHandler;
+
+
+
+
     @Override
     protected void configure(AuthenticationManagerBuilder auth) throws Exception {
         auth.authenticationProvider(authenticationProvider());
@@ -36,10 +41,21 @@ public class SecurityConfig extends WebSecurityConfigurerAdapter {
                 .and()
                 .csrf().disable().headers().frameOptions().disable() // for Postman, the H2 console
                 .and()
+                .exceptionHandling().accessDeniedHandler(customAccessDeniedHandler)
+                .and()
                 .authorizeRequests() // manage access
-                .antMatchers(HttpMethod.POST, "/api/signup").permitAll()
-                .antMatchers(HttpMethod.GET, "/api/empl/payment").hasAuthority(Role.ROLE_USER.toString())
-                .antMatchers(HttpMethod.POST, "/api/auth/changepass").hasAuthority(Role.ROLE_USER.toString())
+                .antMatchers("/api/auth/signup").permitAll()
+                .antMatchers("/api/auth/changepass").hasAnyAuthority(
+                        Role.ROLE_USER.toString(),
+                        Role.ROLE_ACCOUNTANT.toString(),
+                        Role.ROLE_ADMINISTRATOR.toString())
+                .antMatchers("/api/empl/payment").hasAnyAuthority(
+                        Role.ROLE_USER.toString(),
+                        Role.ROLE_ACCOUNTANT.toString())
+                .antMatchers("/api/acct/payments").hasAuthority(Role.ROLE_ACCOUNTANT.toString())
+                .antMatchers("/api/auth/changepass").authenticated()
+                .antMatchers("/api/admin/**").hasAuthority(Role.ROLE_ADMINISTRATOR.toString())
+                .antMatchers("/api/security/**").hasAuthority(Role.ROLE_AUDITOR.toString())
                 // other matchers
                 .and()
                 .sessionManagement()

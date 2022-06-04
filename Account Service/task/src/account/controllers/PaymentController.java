@@ -1,30 +1,55 @@
 package account.controllers;
 
+import account.payment.PaymentDto;
+import account.payment.PaymentService;
 import account.user.User;
 import account.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
 
+import javax.validation.Valid;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+
 @RestController
-@RequestMapping("/api/empl")
+@RequestMapping("/api")
 public class PaymentController {
 
     @Autowired
     UserService userService;
+    @Autowired
+    PaymentService paymentService;
 
-    @GetMapping("/payment")
-    public ResponseEntity getPayment(@AuthenticationPrincipal User user) {
-        if (userService.userExistsByEmail(user.getUsername())) {
-            return ResponseEntity.ok(userService.getUserByEmail(user.getUsername()).get());
+    @GetMapping("/empl/payment")
+    public ResponseEntity getPayment(@RequestParam(required = false) String period) {
+        User user = userService.getUserByEmail(SecurityContextHolder.getContext().getAuthentication().getName()).get();
+        System.out.println("[DEBUG]PaymentController->getPayment: " + user);
+        if (period == null) {
+            return paymentService.getAllPaymentsByEmail(user.getEmail());
         } else {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+            try {
+                YearMonth convertedPeriod = YearMonth.parse(period, DateTimeFormatter.ofPattern("MM-yyyy"));
+                return paymentService.getPaymentByEmailAndPeriod(user.getEmail(), convertedPeriod);
+            } catch (Exception e) {
+                System.out.println("Bad Date entered: " + period);
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Date Entered");
+            }
         }
+    }
+
+    @PostMapping("/acct/payments")
+    public ResponseEntity addPayments(@RequestBody ArrayList<@Valid PaymentDto> paymentDtos) {
+        return paymentService.addPayments(paymentDtos);
+    }
+
+    @PutMapping("/acct/payments")
+    public ResponseEntity addPaymentToUser(@RequestBody @Valid PaymentDto paymentDto) {
+        return paymentService.updatePayment(paymentDto);
     }
 
 }

@@ -1,15 +1,12 @@
 package account.controllers;
 
-import account.exceptions.PasswordCompromisedException;
-import account.exceptions.UserExistException;
-import account.security.Role;
+import account.audit.LogService;
 import account.user.User;
 import account.user.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,8 +25,6 @@ public class AuthController {
     @Autowired
     UserService userService;
 
-    @Autowired
-    PasswordEncoder encoder;
 
     Set<String> compromisedPasswords = new HashSet<>(Set.of("PasswordForJanuary", "PasswordForFebruary",
             "PasswordForMarch", "PasswordForApril", "PasswordForMay", "PasswordForJune", "PasswordForJuly",
@@ -38,16 +33,7 @@ public class AuthController {
 
     @PostMapping("/signup")
     public ResponseEntity signUp(@RequestBody @Valid User user) {
-        if (userService.userExistsByEmail(user.getEmail())) {
-            throw new UserExistException();
-        } else if (compromisedPasswords.contains(user.getPassword())) {
-            throw new PasswordCompromisedException();
-        } else {
-            user.setPassword(encoder.encode(user.getPassword()));
-            user.grantAuthority(Role.ROLE_USER);
-            userService.save(user);
-            return ResponseEntity.ok(user);
-        }
+        return userService.createUser(user);
     }
 
     @PostMapping("/changepass")

@@ -1,7 +1,6 @@
 package account.user;
 
 
-import account.payment.Payment;
 import account.security.Role;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -16,7 +15,6 @@ import javax.validation.constraints.NotEmpty;
 import javax.validation.constraints.Size;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 
 @Validated
 @Entity
@@ -45,15 +43,11 @@ public class User implements UserDetails {
     private boolean credentialsNonExpired;
     private boolean accountNonExpired;
     private boolean accountNonLocked;
+    private int failedAttempt;
 
-    @JsonIgnore
     @Enumerated(EnumType.STRING)
     @ElementCollection(fetch = FetchType.EAGER)
     private List<Role> roles;
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "user")
-    private Set<Payment> payments;
 
 
     public User() {
@@ -92,7 +86,7 @@ public class User implements UserDetails {
     }
 
     public void setEmail(String email) {
-        this.email = email;
+        this.email = email.toLowerCase();
     }
 
 
@@ -140,10 +134,6 @@ public class User implements UserDetails {
         return roles;
     }
 
-    public Set<Payment> getPayments() {
-        return payments;
-    }
-
     @JsonIgnore
     public void grantAuthority(Role authority) {
         if (roles == null) {
@@ -152,11 +142,59 @@ public class User implements UserDetails {
         roles.add(authority);
     }
 
+    public void setEnabled(boolean enabled) {
+        this.enabled = enabled;
+    }
+
+    public void setCredentialsNonExpired(boolean credentialsNonExpired) {
+        this.credentialsNonExpired = credentialsNonExpired;
+    }
+
+    public void setAccountNonExpired(boolean accountNonExpired) {
+        this.accountNonExpired = accountNonExpired;
+    }
+
+    public void setAccountNonLocked(boolean accountNonLocked) {
+        this.accountNonLocked = accountNonLocked;
+    }
+
+    @JsonIgnore
+    public void removeAuthority(Role authority) {
+        getAuthorities().remove(authority);
+    }
+
+    @JsonIgnore
+    public void removeRole(Role role) {
+        roles.remove(role);
+    }
+
     @JsonIgnore
     @Override
     public List<GrantedAuthority> getAuthorities() {
         List<GrantedAuthority> authorities = new ArrayList<>();
         roles.forEach(role -> authorities.add(new SimpleGrantedAuthority(role.toString())));
         return authorities;
+    }
+
+    @Override
+    public String toString() {
+        return "User{" +
+                "id=" + id +
+                ", name='" + name + '\'' +
+                ", lastname='" + lastname + '\'' +
+                ", email='" + email + '\'' +
+                '}';
+    }
+
+    public void incrementFailedAttempt() {
+        this.failedAttempt++;
+    }
+
+    public int getFailedAttempts() {
+        return failedAttempt;
+    }
+
+    public void setFailedAttempts(int failedAttempts) {
+        this.failedAttempt = failedAttempts;
     }
 }
