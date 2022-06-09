@@ -8,6 +8,8 @@ First attempt at REST API with full intergration of Spring Boot:
 - Spring Security (authorising and authenticating) 
 - Spring Data (JPA using H2 DB)
 - Spring Validation
+- Logging (using DB entries)
+- Securing connection via HTTPS
 
 System for tracking payroll entries.
 
